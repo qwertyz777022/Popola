@@ -1,0 +1,422 @@
+-- LocalScript -> StarterPlayer > StarterPlayerScripts
+-- Встроенное меню для твоей игры: Local Player / Combat / Settings
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+
+--------------------------------------------------------------------
+-- Настройки (значения по умолчанию)
+--------------------------------------------------------------------
+local State = {
+	SpeedOn = false, Speed = 50,
+	JumpOn = false, Jump = 100,
+	SpinOn = false, Spin = 20,
+
+	Aimbot = false,
+	AimPart = "Head",
+	Smoothing = 10,
+	FOV = 150,
+	FOVCircle = true,
+	WallCheck = true,
+
+	HoldRMB = UIS.MouseEnabled, -- на телефоне аим работает без удержания
+	MenuKey = "RightShift",
+}
+
+--------------------------------------------------------------------
+-- Мелкие помощники для интерфейса
+--------------------------------------------------------------------
+local BG = Color3.fromRGB(24, 24, 30)
+local PANEL = Color3.fromRGB(38, 38, 47)
+local ACCENT = Color3.fromRGB(60, 140, 255)
+local OFF = Color3.fromRGB(75, 75, 88)
+local WHITE = Color3.fromRGB(255, 255, 255)
+
+local function new(class, props, parent)
+	local o = Instance.new(class)
+	for k, v in props do
+		o[k] = v
+	end
+	o.Parent = parent
+	return o
+end
+
+local function corner(obj, r)
+	new("UICorner", {CornerRadius = UDim.new(0, r or 6)}, obj)
+end
+
+local function isPointer(i)
+	return i.UserInputType == Enum.UserInputType.MouseButton1
+		or i.UserInputType == Enum.UserInputType.Touch
+end
+
+local function isMove(i)
+	return i.UserInputType == Enum.UserInputType.MouseMovement
+		or i.UserInputType == Enum.UserInputType.Touch
+end
+
+--------------------------------------------------------------------
+-- Окна
+--------------------------------------------------------------------
+local playerGui = player:WaitForChild("PlayerGui")
+
+local fovGui = new("ScreenGui", {
+	Name = "FovCircleGui", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 1,
+}, playerGui)
+
+local fovCircle = new("Frame", {
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	BackgroundTransparency = 1,
+	Size = UDim2.fromOffset(300, 300),
+	Visible = true,
+}, fovGui)
+corner(fovCircle, 1000)
+new("UIStroke", {Thickness = 2, Color = WHITE, Transparency = 0.2}, fovCircle)
+
+local gui = new("ScreenGui", {
+	Name = "ControlPanel", ResetOnSpawn = false, DisplayOrder = 10,
+	ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+}, playerGui)
+
+local window = new("Frame", {
+	Size = UDim2.fromOffset(460, 290),
+	Position = UDim2.new(0.5, -230, 0.5, -145),
+	BackgroundColor3 = BG,
+}, gui)
+corner(window, 10)
+
+local title = new("Frame", {
+	Size = UDim2.new(1, 0, 0, 32), BackgroundColor3 = PANEL,
+}, window)
+corner(title, 10)
+new("TextLabel", {
+	Size = UDim2.new(1, -50, 1, 0), Position = UDim2.fromOffset(12, 0),
+	BackgroundTransparency = 1, Text = "Control Panel", TextColor3 = WHITE,
+	Font = Enum.Font.GothamBold, TextSize = 15, TextXAlignment = Enum.TextXAlignment.Left,
+}, title)
+
+local closeBtn = new("TextButton", {
+	Size = UDim2.fromOffset(28, 22), AnchorPoint = Vector2.new(1, 0.5),
+	Position = UDim2.new(1, -6, 0.5, 0), BackgroundColor3 = OFF,
+	Text = "X", TextColor3 = WHITE, Font = Enum.Font.GothamBold, TextSize = 13,
+	AutoButtonColor = true,
+}, title)
+corner(closeBtn, 6)
+
+-- Кнопка для открытия меню (удобно на телефоне)
+local menuBtn = new("TextButton", {
+	Size = UDim2.fromOffset(44, 44), Position = UDim2.new(0, 10, 0.5, -22),
+	BackgroundColor3 = BG, Text = "☰", TextColor3 = WHITE,
+	Font = Enum.Font.GothamBold, TextSize = 22,
+}, gui)
+corner(menuBtn, 22)
+
+local function toggleWindow()
+	window.Visible = not window.Visible
+end
+closeBtn.Activated:Connect(function() window.Visible = false end)
+menuBtn.Activated:Connect(toggleWindow)
+
+UIS.InputBegan:Connect(function(input, gpe)
+	if gpe then return end
+	if input.KeyCode == Enum.KeyCode[State.MenuKey] then
+		toggleWindow()
+	end
+end)
+
+-- Перетаскивание окна за заголовок
+do
+	local dragging, dragStart, startPos = false, nil, nil
+	title.InputBegan:Connect(function(i)
+		if isPointer(i) then
+			dragging = true
+			dragStart = i.Position
+			startPos = window.Position
+		end
+	end)
+	UIS.InputChanged:Connect(function(i)
+		if dragging and isMove(i) then
+			local d = i.Position - dragStart
+			window.Position = UDim2.new(
+				startPos.X.Scale, startPos.X.Offset + d.X,
+				startPos.Y.Scale, startPos.Y.Offset + d.Y
+			)
+		end
+	end)
+	UIS.InputEnded:Connect(function(i)
+		if isPointer(i) then dragging = false end
+	end)
+end
+
+-- Вкладки
+local tabList = new("Frame", {
+	Size = UDim2.new(0, 120, 1, -42), Position = UDim2.fromOffset(6, 38),
+	BackgroundTransparency = 1,
+}, window)
+new("UIListLayout", {Padding = UDim.new(0, 6)}, tabList)
+
+local content = new("Frame", {
+	Size = UDim2.new(1, -140, 1, -42), Position = UDim2.fromOffset(132, 38),
+	BackgroundTransparency = 1,
+}, window)
+
+local pages, tabButtons = {}, {}
+
+local function selectTab(name)
+	for n, page in pages do
+		page.Visible = (n == name)
+		tabButtons[n].BackgroundColor3 = (n == name) and ACCENT or PANEL
+	end
+end
+
+local function createTab(name)
+	local btn = new("TextButton", {
+		Size = UDim2.new(1, 0, 0, 34), BackgroundColor3 = PANEL,
+		Text = name, TextColor3 = WHITE, Font = Enum.Font.GothamMedium,
+		TextSize = 14, AutoButtonColor = false,
+	}, tabList)
+	corner(btn)
+	local page = new("ScrollingFrame", {
+		Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0,
+		ScrollBarThickness = 3, AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		CanvasSize = UDim2.new(), Visible = false,
+	}, content)
+	new("UIListLayout", {Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder}, page)
+	pages[name] = page
+	tabButtons[name] = btn
+	btn.Activated:Connect(function() selectTab(name) end)
+	return page
+end
+
+--------------------------------------------------------------------
+-- Элементы: переключатель, ползунок, выбор из списка
+--------------------------------------------------------------------
+local function rowLabel(row, text)
+	return new("TextLabel", {
+		Size = UDim2.new(1, -70, 0, 22), Position = UDim2.fromOffset(10, 6),
+		BackgroundTransparency = 1, Text = text, TextColor3 = WHITE,
+		Font = Enum.Font.Gotham, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left,
+	}, row)
+end
+
+local function addToggle(page, text, default, callback)
+	local row = new("Frame", {Size = UDim2.new(1, -8, 0, 34), BackgroundColor3 = PANEL}, page)
+	corner(row)
+	local lbl = rowLabel(row, text)
+	lbl.Position = UDim2.fromOffset(10, 6)
+	local btn = new("TextButton", {
+		Size = UDim2.fromOffset(44, 20), AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, -10, 0.5, 0), Text = "", AutoButtonColor = false,
+	}, row)
+	corner(btn, 10)
+	local knob = new("Frame", {Size = UDim2.fromOffset(16, 16), BackgroundColor3 = WHITE}, btn)
+	corner(knob, 8)
+	local on = default
+	local function render()
+		btn.BackgroundColor3 = on and ACCENT or OFF
+		knob.Position = on and UDim2.fromOffset(26, 2) or UDim2.fromOffset(2, 2)
+	end
+	render()
+	btn.Activated:Connect(function()
+		on = not on
+		render()
+		callback(on)
+	end)
+end
+
+local function addSlider(page, text, min, max, default, callback)
+	local row = new("Frame", {Size = UDim2.new(1, -8, 0, 50), BackgroundColor3 = PANEL}, page)
+	corner(row)
+	local lbl = rowLabel(row, text .. ": " .. default)
+	lbl.Size = UDim2.new(1, -20, 0, 22)
+	local bar = new("Frame", {
+		Size = UDim2.new(1, -20, 0, 6), Position = UDim2.fromOffset(10, 36),
+		BackgroundColor3 = OFF,
+	}, row)
+	corner(bar, 3)
+	local fill = new("Frame", {
+		Size = UDim2.fromScale((default - min) / (max - min), 1),
+		BackgroundColor3 = ACCENT, BorderSizePixel = 0,
+	}, bar)
+	corner(fill, 3)
+	local hit = new("TextButton", {
+		Size = UDim2.new(1, 0, 0, 26), Position = UDim2.fromOffset(0, -10),
+		BackgroundTransparency = 1, Text = "",
+	}, bar)
+
+	local dragging = false
+	local function setFromX(x)
+		local a = math.clamp((x - bar.AbsolutePosition.X) / bar.AbsoluteSize.X, 0, 1)
+		local v = math.floor(min + (max - min) * a + 0.5)
+		fill.Size = UDim2.fromScale(a, 1)
+		lbl.Text = text .. ": " .. v
+		callback(v)
+	end
+	hit.InputBegan:Connect(function(i)
+		if isPointer(i) then
+			dragging = true
+			page.ScrollingEnabled = false
+			setFromX(i.Position.X)
+		end
+	end)
+	UIS.InputChanged:Connect(function(i)
+		if dragging and isMove(i) then setFromX(i.Position.X) end
+	end)
+	UIS.InputEnded:Connect(function(i)
+		if dragging and isPointer(i) then
+			dragging = false
+			page.ScrollingEnabled = true
+		end
+	end)
+end
+
+-- Нажатие переключает варианты по кругу (удобно на телефоне)
+local function addCycle(page, text, options, default, callback)
+	local row = new("Frame", {Size = UDim2.new(1, -8, 0, 34), BackgroundColor3 = PANEL}, page)
+	corner(row)
+	rowLabel(row, text)
+	local idx = table.find(options, default) or 1
+	local btn = new("TextButton", {
+		Size = UDim2.fromOffset(100, 24), AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, -8, 0.5, 0), BackgroundColor3 = OFF,
+		Text = options[idx], TextColor3 = WHITE, Font = Enum.Font.GothamMedium, TextSize = 13,
+	}, row)
+	corner(btn)
+	btn.Activated:Connect(function()
+		idx = idx % #options + 1
+		btn.Text = options[idx]
+		callback(options[idx])
+	end)
+end
+
+--------------------------------------------------------------------
+-- Вкладки и функции
+--------------------------------------------------------------------
+local lp = createTab("Local Player")
+addToggle(lp, "Speed", State.SpeedOn, function(v) State.SpeedOn = v end)
+addSlider(lp, "Speed value", 1, 1000, State.Speed, function(v) State.Speed = v end)
+addToggle(lp, "Jump", State.JumpOn, function(v) State.JumpOn = v end)
+addSlider(lp, "Jump value", 1, 1000, State.Jump, function(v) State.Jump = v end)
+addToggle(lp, "Spin", State.SpinOn, function(v) State.SpinOn = v end)
+addSlider(lp, "Spin speed", 1, 100, State.Spin, function(v) State.Spin = v end)
+
+local combat = createTab("Combat")
+addToggle(combat, "Aim Bot", State.Aimbot, function(v) State.Aimbot = v end)
+addCycle(combat, "Aim Part", {"Head", "Torso", "Legs"}, State.AimPart, function(v) State.AimPart = v end)
+addSlider(combat, "Aim Smoothing", 1, 100, State.Smoothing, function(v) State.Smoothing = v end)
+addSlider(combat, "FOV", 10, 500, State.FOV, function(v) State.FOV = v end)
+addToggle(combat, "FOV Circle", State.FOVCircle, function(v) State.FOVCircle = v end)
+addToggle(combat, "Wall Check", State.WallCheck, function(v) State.WallCheck = v end)
+
+local settings = createTab("Settings")
+addCycle(settings, "Menu Key", {"RightShift", "Insert", "RightControl", "P"}, State.MenuKey, function(v)
+	State.MenuKey = v
+end)
+addToggle(settings, "Hold RMB to aim", State.HoldRMB, function(v) State.HoldRMB = v end)
+
+selectTab("Local Player")
+
+--------------------------------------------------------------------
+-- Local Player: speed / jump / spin
+--------------------------------------------------------------------
+local wasSpeed, wasJump, wasSpin = false, false, false
+
+RunService.Heartbeat:Connect(function(dt)
+	local char = player.Character
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	local root = char and char:FindFirstChild("HumanoidRootPart")
+	if not hum or not root then return end
+
+	if State.SpeedOn then
+		hum.WalkSpeed = State.Speed
+	elseif wasSpeed then
+		hum.WalkSpeed = 16
+	end
+	wasSpeed = State.SpeedOn
+
+	if State.JumpOn then
+		hum.UseJumpPower = true
+		hum.JumpPower = State.Jump
+	elseif wasJump then
+		hum.JumpPower = 50
+	end
+	wasJump = State.JumpOn
+
+	if State.SpinOn then
+		hum.AutoRotate = false
+		root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(State.Spin * 10) * dt, 0)
+	elseif wasSpin then
+		hum.AutoRotate = true
+	end
+	wasSpin = State.SpinOn
+end)
+
+--------------------------------------------------------------------
+-- Combat: aim bot + FOV circle + wall check
+--------------------------------------------------------------------
+local rayParams = RaycastParams.new()
+rayParams.FilterType = Enum.RaycastFilterType.Exclude
+
+local function getAimPart(char)
+	if State.AimPart == "Head" then
+		return char:FindFirstChild("Head")
+	elseif State.AimPart == "Torso" then
+		return char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
+	else
+		return char:FindFirstChild("LeftLowerLeg") or char:FindFirstChild("Left Leg")
+	end
+end
+
+local function isVisible(cam, part, char)
+	rayParams.FilterDescendantsInstances = {player.Character}
+	local origin = cam.CFrame.Position
+	local result = Workspace:Raycast(origin, part.Position - origin, rayParams)
+	return result == nil or result.Instance:IsDescendantOf(char)
+end
+
+local function getTarget(cam)
+	local center = cam.ViewportSize / 2
+	local best, bestDist = nil, State.FOV
+	for _, plr in Players:GetPlayers() do
+		local char = plr.Character
+		if plr ~= player and char then
+			local hum = char:FindFirstChildOfClass("Humanoid")
+			local part = getAimPart(char)
+			if hum and hum.Health > 0 and part then
+				local pos, onScreen = cam:WorldToViewportPoint(part.Position)
+				if onScreen then
+					local d = (Vector2.new(pos.X, pos.Y) - center).Magnitude
+					if d < bestDist and (not State.WallCheck or isVisible(cam, part, char)) then
+						best, bestDist = part, d
+					end
+				end
+			end
+		end
+	end
+	return best
+end
+
+RunService:BindToRenderStep("AimBot", Enum.RenderPriority.Camera.Value + 1, function(dt)
+	local cam = Workspace.CurrentCamera
+	if not cam then return end
+
+	-- FOV круг в центре экрана
+	local vs = cam.ViewportSize
+	fovCircle.Position = UDim2.fromOffset(vs.X / 2, vs.Y / 2)
+	fovCircle.Size = UDim2.fromOffset(State.FOV * 2, State.FOV * 2)
+	fovCircle.Visible = State.FOVCircle
+
+	if not State.Aimbot then return end
+	if State.HoldRMB and not UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then return end
+
+	local target = getTarget(cam)
+	if target then
+		local cf = cam.CFrame
+		local goal = CFrame.lookAt(cf.Position, target.Position)
+		cam.CFrame = cf:Lerp(goal, math.clamp(dt * 60 / State.Smoothing, 0, 1))
+	end
+end)
