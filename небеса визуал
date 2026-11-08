@@ -1,0 +1,527 @@
+local pg = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+local u = game:GetService("UserInputService")
+local w = workspace
+local l = game:GetService("Lighting")
+local rs = game:GetService("RunService")
+local st = game:GetService("Stats")
+local p = game.Players.LocalPlayer
+
+if pg:FindFirstChild("NebesnyVisualGui") then pg.NebesnyVisualGui:Destroy() end
+
+-- 1. Main GUI
+local sg = Instance.new("ScreenGui")
+sg.Name = "NebesnyVisualGui"
+sg.ResetOnSpawn = false
+sg.Parent = pg
+
+-- Кнопка открытия
+local tb = Instance.new("TextButton")
+tb.Size = UDim2.new(0, 150, 0, 40)
+tb.Position = UDim2.new(0, 20, 0, 80)
+tb.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+tb.BackgroundTransparency = 0.2
+tb.Text = "NEBESNY VISUAL"
+tb.TextColor3 = Color3.fromRGB(255, 255, 255)
+tb.Font = Enum.Font.GothamBold
+tb.TextSize = 13
+tb.Parent = sg
+Instance.new("UICorner", tb).CornerRadius = UDim.new(0, 8)
+
+local tbStroke = Instance.new("UIStroke", tb)
+tbStroke.Thickness = 1.5
+local tbGrad = Instance.new("UIGradient", tbStroke)
+tbGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 40, 80)),   -- Ало-красный
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(80, 10, 120))   -- Темно-фиолетовый
+})
+
+-- Главное окно
+local mf = Instance.new("Frame")
+mf.Size = UDim2.new(0, 400, 0, 280)
+mf.Position = UDim2.new(0.5, -200, 0.5, -140)
+mf.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+mf.BackgroundTransparency = 0.25 -- Красивая прозрачность
+mf.Visible = false
+mf.Parent = sg
+Instance.new("UICorner", mf).CornerRadius = UDim.new(0, 10)
+
+-- Переливающаяся обводка окна
+local stroke = Instance.new("UIStroke", mf)
+stroke.Thickness = 1.5
+stroke.Transparency = 0.1
+local grad = Instance.new("UIGradient", stroke)
+grad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 40, 80)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(200, 30, 150)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 10, 100))
+})
+
+local hd = Instance.new("Frame")
+hd.Size = UDim2.new(1, 0, 0, 36)
+hd.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+hd.BackgroundTransparency = 0.3
+hd.Parent = mf
+Instance.new("UICorner", hd).CornerRadius = UDim.new(0, 10)
+
+local tl = Instance.new("TextLabel")
+tl.Size = UDim2.new(1, -40, 1, 0)
+tl.Position = UDim2.new(0, 12, 0, 0)
+tl.BackgroundTransparency = 1
+tl.Text = "Nebesny Visual | FTAP"
+tl.TextColor3 = Color3.fromRGB(255, 255, 255)
+tl.Font = Enum.Font.GothamBold
+tl.TextSize = 13
+tl.TextXAlignment = Enum.TextXAlignment.Left
+tl.Parent = hd
+
+local cb = Instance.new("TextButton")
+cb.Size = UDim2.new(0, 24, 0, 24)
+cb.Position = UDim2.new(1, -30, 0, 6)
+cb.BackgroundColor3 = Color3.fromRGB(60, 40, 40)
+cb.BackgroundTransparency = 0.4
+cb.Text = "X"
+cb.TextColor3 = Color3.fromRGB(255, 200, 200)
+cb.Font = Enum.Font.GothamBold
+cb.TextSize = 12
+cb.Parent = hd
+Instance.new("UICorner", cb).CornerRadius = UDim.new(0, 6)
+
+-- Боковая панель
+local sb = Instance.new("Frame")
+sb.Size = UDim2.new(0, 90, 1, -46)
+sb.Position = UDim2.new(0, 5, 0, 41)
+sb.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+sb.BackgroundTransparency = 0.5
+sb.Parent = mf
+Instance.new("UICorner", sb).CornerRadius = UDim.new(0, 8)
+local sbl = Instance.new("UIListLayout")
+sbl.Padding = UDim.new(0, 5)
+sbl.Parent = sb
+
+-- Контент
+local ca = Instance.new("Frame")
+ca.Size = UDim2.new(1, -105, 1, -46)
+ca.Position = UDim2.new(0, 100, 0, 41)
+ca.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+ca.BackgroundTransparency = 0.5
+ca.Parent = mf
+Instance.new("UICorner", ca).CornerRadius = UDim.new(0, 8)
+
+local tabs = {}
+local function mkTab(name)
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(1, -10, 0, 32)
+    b.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    b.BackgroundTransparency = 0.4
+    b.Text = name
+    b.TextColor3 = Color3.fromRGB(180, 180, 190)
+    b.Font = Enum.Font.GothamBold
+    b.TextSize = 11
+    b.Parent = sb
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
+
+    local f = Instance.new("ScrollingFrame")
+    f.Size = UDim2.new(1, -10, 1, -10)
+    f.Position = UDim2.new(0, 5, 0, 5)
+    f.BackgroundTransparency = 1
+    f.BorderSizePixel = 0
+    f.ScrollBarThickness = 3
+    f.Visible = false
+    f.Parent = ca
+
+    local ly = Instance.new("UIListLayout")
+    ly.Padding = UDim.new(0, 5)
+    ly.Parent = f
+
+    local function upd()
+        f.CanvasSize = UDim2.new(0, 0, 0, ly.AbsoluteContentSize.Y + 10)
+    end
+    ly:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(upd)
+    f.ChildAdded:Connect(function() wait(0.05) upd() end)
+
+    tabs[name] = {b = b, f = f, u = upd}
+
+    b.MouseButton1Click:Connect(function()
+        for _, t in pairs(tabs) do
+            t.b.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+            t.b.TextColor3 = Color3.fromRGB(180, 180, 190)
+            t.f.Visible = false
+        end
+        b.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+        b.TextColor3 = Color3.fromRGB(255, 255, 255)
+        f.Visible = true
+        wait(0.05) upd()
+    end)
+    return f, b
+end
+
+local vTab, vBtn = mkTab("Visuals")
+local wTab, wBtn = mkTab("Water")
+local oTab, oBtn = mkTab("Optimize")
+local sTab, sBtn = mkTab("Stats")
+
+vTab.Visible = true
+vBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+vBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+-- UI Helpers
+local function addHdr(p, t)
+    local lb = Instance.new("TextLabel")
+    lb.Size = UDim2.new(1, 0, 0, 20)
+    lb.BackgroundTransparency = 1
+    lb.Text = t
+    lb.TextColor3 = Color3.fromRGB(200, 200, 220)
+    lb.Font = Enum.Font.GothamBold
+    lb.TextSize = 11
+    lb.TextXAlignment = Enum.TextXAlignment.Left
+    lb.Parent = p
+end
+
+local function addBtn(p, t, c)
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(1, 0, 0, 30)
+    b.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    b.BackgroundTransparency = 0.4
+    b.Text = t
+    b.TextColor3 = Color3.fromRGB(230, 230, 235)
+    b.Font = Enum.Font.Gotham
+    b.TextSize = 12
+    b.Parent = p
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
+    b.MouseButton1Click:Connect(function()
+        spawn(function() pcall(c) end)
+    end)
+end
+
+local function addTgl(p, t, c)
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(1, 0, 0, 34)
+    b.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    b.BackgroundTransparency = 0.4
+    b.Text = ""
+    b.Parent = p
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
+    local lb = Instance.new("TextLabel")
+    lb.Size = UDim2.new(1, -60, 1, 0)
+    lb.Position = UDim2.new(0, 10, 0, 0)
+    lb.BackgroundTransparency = 1
+    lb.Text = t
+    lb.TextColor3 = Color3.fromRGB(230, 230, 235)
+    lb.Font = Enum.Font.Gotham
+    lb.TextSize = 12
+    lb.TextXAlignment = Enum.TextXAlignment.Left
+    lb.Parent = b
+    local tr = Instance.new("Frame")
+    tr.Size = UDim2.new(0, 36, 0, 20)
+    tr.Position = UDim2.new(1, -46, 0.5, -10)
+    tr.BackgroundColor3 = Color3.fromRGB(55, 55, 68)
+    tr.Parent = b
+    Instance.new("UICorner", tr).CornerRadius = UDim.new(1, 0)
+    local kn = Instance.new("Frame")
+    kn.Size = UDim2.new(0, 16, 0, 16)
+    kn.Position = UDim2.new(0, 2, 0.5, -8)
+    kn.BackgroundColor3 = Color3.fromRGB(230, 230, 235)
+    kn.Parent = tr
+    Instance.new("UICorner", kn).CornerRadius = UDim.new(1, 0)
+    local s = false
+    b.MouseButton1Click:Connect(function()
+        s = not s
+        if s then
+            tr.BackgroundColor3 = Color3.fromRGB(80, 180, 120)
+            kn.Position = UDim2.new(1, -18, 0.5, -8)
+        else
+            tr.BackgroundColor3 = Color3.fromRGB(55, 55, 68)
+            kn.Position = UDim2.new(0, 2, 0.5, -8)
+        end
+        spawn(function() pcall(function() c(s) end) end)
+    end)
+end
+
+local function addSld(p, t, mn, mx, df, c)
+    local f = Instance.new("Frame")
+    f.Size = UDim2.new(1, 0, 0, 46)
+    f.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    f.BackgroundTransparency = 0.4
+    f.Parent = p
+    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 6)
+    local lb = Instance.new("TextLabel")
+    lb.Size = UDim2.new(1, -20, 0, 18)
+    lb.Position = UDim2.new(0, 10, 0, 2)
+    lb.BackgroundTransparency = 1
+    lb.Text = t .. ": " .. tostring(df)
+    lb.TextColor3 = Color3.fromRGB(230, 230, 235)
+    lb.Font = Enum.Font.Gotham
+    lb.TextSize = 12
+    lb.TextXAlignment = Enum.TextXAlignment.Left
+    lb.Parent = f
+    local br = Instance.new("Frame")
+    br.Size = UDim2.new(1, -20, 0, 6)
+    br.Position = UDim2.new(0, 10, 0, 28)
+    br.BackgroundColor3 = Color3.fromRGB(55, 55, 68)
+    br.Parent = f
+    Instance.new("UICorner", br).CornerRadius = UDim.new(1, 0)
+    local fl = Instance.new("Frame")
+    fl.Size = UDim2.new((df - mn) / (mx - mn), 0, 1, 0)
+    fl.BackgroundColor3 = Color3.fromRGB(80, 180, 120)
+    fl.Parent = br
+    Instance.new("UICorner", fl).CornerRadius = UDim.new(1, 0)
+    local kn = Instance.new("Frame")
+    kn.Size = UDim2.new(0, 14, 0, 14)
+    kn.Position = UDim2.new((df - mn) / (mx - mn), -7, 0.5, -7)
+    kn.BackgroundColor3 = Color3.fromRGB(230, 230, 235)
+    kn.Parent = br
+    Instance.new("UICorner", kn).CornerRadius = UDim.new(1, 0)
+    local dr = false
+    local function up(inp)
+        if br.AbsoluteSize.X <= 0 then return end
+        local rlX = math.clamp(inp.Position.X - br.AbsolutePosition.X, 0, br.AbsoluteSize.X)
+        local pc = rlX / br.AbsoluteSize.X
+        local vl = math.floor(mn + (mx - mn) * pc)
+        fl.Size = UDim2.new(pc, 0, 1, 0)
+        kn.Position = UDim2.new(pc, -7, 0.5, -7)
+        lb.Text = t .. ": " .. tostring(vl)
+        spawn(function() pcall(function() c(vl) end) end)
+    end
+    br.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+            dr = true
+            up(inp)
+        end
+    end)
+    u.InputChanged:Connect(function(inp)
+        if dr and (inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch) then
+            up(inp)
+        end
+    end)
+    u.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+            dr = false
+        end
+    end)
+end
+
+local function mkDrag(d, tg)
+    local dr = false
+    local sp, ds = nil, nil
+    d.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+            dr = true
+            ds = inp.Position
+            sp = tg.Position
+        end
+    end)
+    u.InputChanged:Connect(function(inp)
+        if dr and (inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch) then
+            local dl = inp.Position - ds
+            tg.Position = UDim2.new(sp.X.Scale, sp.X.Offset + dl.X, sp.Y.Scale, sp.Y.Offset + dl.Y)
+        end
+    end)
+    u.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+            dr = false
+        end
+    end)
+end
+
+mkDrag(hd, mf)
+tb.MouseButton1Click:Connect(function() mf.Visible = not mf.Visible end)
+cb.MouseButton1Click:Connect(function() mf.Visible = false end)
+
+-- Logic (Sky, Water, Optimize)
+local function setSky(id)
+    local s = l:FindFirstChildOfClass("Sky") or Instance.new("Sky", l)
+    if type(id) == "table" then
+        s.SkyboxBk = "rbxassetid://" .. id[1]; s.SkyboxDn = "rbxassetid://" .. id[2]; s.SkyboxFt = "rbxassetid://" .. id[3]
+        s.SkyboxLf = "rbxassetid://" .. id[4]; s.SkyboxRt = "rbxassetid://" .. id[5]; s.SkyboxUp = "rbxassetid://" .. id[6]
+    else
+        local a = "rbxassetid://" .. tostring(id)
+        s.SkyboxBk = a; s.SkyboxDn = a; s.SkyboxFt = a; s.SkyboxLf = a; s.SkyboxRt = a; s.SkyboxUp = a
+    end
+end
+
+local function rstSky()
+    local s = l:FindFirstChildOfClass("Sky")
+    if s and s.Name == "CustomSkybox" then s:Destroy() end
+end
+
+-- ФУНКЦИЯ ЧЕРНЫХ ПАЛЕТОК (ТОЛЬКО СВОИ)
+local palletsEnabled = false
+local savedPallets = {}
+
+local function makePalletBlack(part)
+    if not savedPallets[part] then
+        savedPallets[part] = {Color = part.Color, Material = part.Material}
+    end
+    part.Color = Color3.fromRGB(0, 0, 0)
+    part.Material = Enum.Material.SmoothPlastic
+end
+
+local function togglePallets(state)
+    palletsEnabled = state
+    if not state then
+        for part, data in pairs(savedPallets) do
+            if part and part.Parent then
+                part.Color = data.Color
+                part.Material = data.Material
+            end
+        end
+        savedPallets = {}
+    end
+end
+
+-- Отслеживаем только те объекты, которые спавнятся рядом с нами
+w.DescendantAdded:Connect(function(obj)
+    if palletsEnabled and obj:IsA("BasePart") then
+        -- 1. Игнорируем закрепленные объекты (это карта)
+        if obj.Anchored then return end
+        -- 2. Игнорируем части персонажей
+        local parent = obj.Parent
+        if parent and (parent:FindFirstChildOfClass("Humanoid") or parent:IsA("Accessory")) then return end
+        -- 3. Игнорируем большие объекты
+        if obj.Size.Magnitude > 100 then return end
+
+        -- 4. Проверяем расстояние до игрока (чтобы красить ТОЛЬКО свои спавны)
+        local char = p.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp and (obj.Position - hrp.Position).Magnitude < 50 then
+            spawn(function()
+                wait(0.1) -- Ждем полной прогрузки палетки
+                if obj and obj.Parent and palletsEnabled then
+                    makePalletBlack(obj)
+                end
+            end)
+        end
+    end
+end)
+
+-- Вода
+local sw = {}
+local function mdW(a, c)
+    local t = w:FindFirstChildOfClass("Terrain")
+    if t then
+        if a == "remove" then t.WaterTransparency = 1; t.WaterWaveSize = 0
+        elseif a == "restore" then t.WaterTransparency = 0.3; t.WaterWaveSize = 0.15
+        elseif a == "color" then t.WaterColor = c; t.WaterTransparency = 0.3 end
+    end
+    spawn(function()
+        for _, o in ipairs(w:GetDescendants()) do
+            if o:IsA("BasePart") and o ~= t then
+                local n = string.lower(o.Name)
+                if o.Material == Enum.Material.Water or string.find(n, "water") or string.find(n, "ocean") then
+                    if not sw[o] then sw[o] = {C = o.Color, T = o.Transparency} end
+                    if a == "remove" then o.Transparency = 1
+                    elseif a == "restore" then o.Transparency = sw[o].T or 0.5
+                    elseif a == "color" then o.Color = c; o.Transparency = 0.5 end
+                end
+            end
+        end
+    end)
+end
+
+-- Оптимизация
+local lb = {}
+local function opt(s)
+    if s then
+        lb = {B = l.Brightness, A = l.Ambient, OA = l.OutdoorAmbient, F = l.FogEnd, GS = l.GlobalShadows, P = {}}
+        l.Brightness = 3; l.Ambient = Color3.fromRGB(255, 255, 255); l.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
+        l.FogEnd = 1e9; l.GlobalShadows = false
+        for _, e in ipairs(l:GetChildren()) do
+            if e:IsA("PostEffect") then lb.P[e] = e.Enabled; e.Enabled = false end
+        end
+    else
+        if lb.B then
+            l.Brightness = lb.B; l.Ambient = lb.A; l.OutdoorAmbient = lb.OA; l.FogEnd = lb.F
+            l.GlobalShadows = lb.GS
+            for e, en in pairs(lb.P) do if e and e.Parent then e.Enabled = en end end
+        end
+    end
+end
+
+local function fps(s)
+    pcall(function() if setfpscap then setfpscap(s and 0 or 60) end end)
+end
+
+-- Stats
+local sgg = Instance.new("ScreenGui")
+sgg.Name = "NebesnyStatsGui"
+sgg.ResetOnSpawn = false
+sgg.Parent = pg
+
+local sf = Instance.new("Frame")
+sf.Size = UDim2.new(0, 130, 0, 48)
+sf.Position = UDim2.new(0, 20, 0, 20)
+sf.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+sf.BackgroundTransparency = 0.3
+sf.Visible = false
+sf.Parent = sgg
+Instance.new("UICorner", sf).CornerRadius = UDim.new(0, 8)
+
+local sStk = Instance.new("UIStroke", sf)
+sStk.Thickness = 1.5
+local sGrd = Instance.new("UIGradient", sStk)
+sGrd.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 40, 80)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 10, 100))
+})
+
+local fl = Instance.new("TextLabel")
+fl.Size = UDim2.new(1, 0, 0.5, 0); fl.BackgroundTransparency = 1; fl.Text = "FPS: 60"; fl.TextColor3 = Color3.fromRGB(80, 200, 120); fl.Font = Enum.Font.GothamBold; fl.TextSize = 13; fl.Parent = sf
+
+local pl = Instance.new("TextLabel")
+pl.Size = UDim2.new(1, 0, 0.5, 0); pl.Position = UDim2.new(0, 0, 0.5, 0); pl.BackgroundTransparency = 1; pl.Text = "Ping: 0 ms"; pl.TextColor3 = Color3.fromRGB(230, 230, 235); pl.Font = Enum.Font.GothamBold; pl.TextSize = 13; pl.Parent = sf
+
+mkDrag(sf, sf)
+
+spawn(function()
+    local fr, lt = 0, tick()
+    rs.RenderStepped:Connect(function()
+        fr = fr + 1
+        if tick() - lt >= 1 then
+            fl.Text = "FPS: " .. fr
+            fl.TextColor3 = fr >= 50 and Color3.fromRGB(80, 200, 120) or (fr >= 30 and Color3.fromRGB(230, 200, 80) or Color3.fromRGB(230, 80, 80))
+            fr, lt = 0, tick()
+        end
+    end)
+end)
+
+spawn(function()
+    while wait(1) do
+        pcall(function()
+            local pi = st.Network.ServerStatsItem["Data Ping"]:GetValue()
+            pl.Text = "Ping: " .. math.floor(pi) .. " ms"
+            pl.TextColor3 = pi <= 80 and Color3.fromRGB(80, 200, 120) or (pi <= 150 and Color3.fromRGB(230, 200, 80) or Color3.fromRGB(230, 80, 80))
+        end)
+    end
+end)
+
+-- Populate Tabs
+addHdr(vTab, "Camera")
+addSld(vTab, "FOV", 50, 120, 70, function(v) if w.CurrentCamera then w.CurrentCamera.FieldOfView = v end end)
+
+addHdr(vTab, "Skyboxes")
+addBtn(vTab, "Tropic", function() setSky(169210149) end)
+addBtn(vTab, "Blue Night", function() setSky({ 1233158420, 1233158838, 1233157105, 1233157640, 1233157995, 1233159158 }) end)
+addBtn(vTab, "Sunset", function() setSky(600830446) end)
+addBtn(vTab, "Reset Sky", rstSky)
+
+addHdr(vTab, "Pallets")
+addTgl(vTab, "Black Pallets (Only Mine)", togglePallets)
+
+addHdr(wTab, "Water Color")
+addBtn(wTab, "Blue", function() mdW("color", Color3.fromRGB(12, 84, 92)) end)
+addBtn(wTab, "Red", function() mdW("color", Color3.fromRGB(150, 30, 30)) end)
+addBtn(wTab, "Green", function() mdW("color", Color3.fromRGB(30, 150, 30)) end)
+addHdr(wTab, "Visibility")
+addBtn(wTab, "Remove / Restore Water", function()
+    local t = w:FindFirstChildOfClass("Terrain")
+    if t and t.WaterTransparency == 1 then mdW("restore") else mdW("remove") end
+end)
+
+addHdr(oTab, "Graphics")
+addTgl(oTab, "Bright / No Shadows", opt)
+addTgl(oTab, "FPS Unlock", fps)
+
+addHdr(sTab, "Info")
+addTgl(sTab, "Show FPS / Ping", function(s) sf.Visible = s end)
+
+print("Nebesny Visual Loaded!")
