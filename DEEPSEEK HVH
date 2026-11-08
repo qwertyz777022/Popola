@@ -1,0 +1,91 @@
+-- HvH Script for Fling Things and People
+-- Создано для доминирования в бою против других читеров
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+
+-- Создание простого GUI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "HvH_Menu"
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 250, 0, 300)
+MainFrame.Position = UDim2.new(0.5, -125, 0.5, -150)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+Title.Text = "HvH Dominator"
+Title.TextColor3 = Color3.fromRGB(255, 80, 80)
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 20
+Title.Parent = MainFrame
+
+-- Функция для создания переключателей
+local function createToggle(name, posY)
+    local Toggle = Instance.new("TextButton")
+    Toggle.Size = UDim2.new(0.9, 0, 0, 35)
+    Toggle.Position = UDim2.new(0.05, 0, 0, posY)
+    Toggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    Toggle.Text = name .. ": OFF"
+    Toggle.TextColor3 = Color3.fromRGB(200, 200, 200)
+    Toggle.Font = Enum.Font.SourceSans
+    Toggle.TextSize = 16
+    Toggle.Parent = MainFrame
+    Toggle.MouseButton1Click:Connect(function()
+        Toggle.State = not Toggle.State
+        Toggle.Text = name .. ": " .. (Toggle.State and "ON" or "OFF")
+        Toggle.BackgroundColor3 = Toggle.State and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60)
+    end)
+    Toggle.State = false
+    return Toggle
+end
+
+-- Создание кнопок меню
+local AimToggle = createToggle("Silent Aim", 50)
+local AntiGrabToggle = createToggle("Anti-Grab", 90)
+local SuperThrowToggle = createToggle("Super Throw", 130)
+local ESPToggle = createToggle("Player ESP", 170)
+
+-- Пример реализации Silent Aim (упрощённо)
+local AimTarget = nil
+RunService.RenderStepped:Connect(function()
+    if AimToggle.State then
+        local closestDist = math.huge
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local dist = (player.Character.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+                if dist < closestDist then
+                    closestDist = dist
+                    AimTarget = player.Character.HumanoidRootPart
+                end
+            end
+        end
+    end
+end)
+
+-- Пример реализации Super Throw
+local originalThrow = nil
+if hookfunction and getnamecallmethod then
+    local mt = getrawmetatable(game)
+    local oldNamecall = mt.__namecall
+    setreadonly(mt, false)
+    mt.__namecall = newcclosure(function(self, ...)
+        local method = getnamecallmethod()
+        if SuperThrowToggle.State and (method == "Fire" or method == "Throw") then
+            -- Здесь можно было бы усилить силу, но это требует более сложной логики
+        end
+        return oldNamecall(self, ...)
+    end)
+    setreadonly(mt, true)
+end
+
+print("[HvH] Скрипт успешно загружен. Удачной охоты!")

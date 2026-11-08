@@ -1,0 +1,543 @@
+--==================================================================
+--  STANDALONE VISUALS (ФИНАЛЬНАЯ ИСПРАВЛЕННАЯ ВЕРСИЯ)
+--==================================================================
+
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+--============================================================
+--  КОРНЕВОЙ GUI
+--============================================================
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "StandaloneVisualsGui"
+screenGui.ResetOnSpawn = false
+screenGui.IgnoreGuiInset = true
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.DisplayOrder = 999
+screenGui.Parent = playerGui
+
+--============================================================
+--  КНОПКА "VISUALS"
+--============================================================
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Name = "VisualsToggle"
+toggleBtn.Size = UDim2.new(0, 170, 0, 52)
+toggleBtn.Position = UDim2.new(0, 20, 0, 120)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(28, 28, 36)
+toggleBtn.BackgroundTransparency = 0.05
+toggleBtn.Text = "🎨  VISUALS"
+toggleBtn.TextColor3 = Color3.fromRGB(240, 240, 245)
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.TextSize = 17
+toggleBtn.AutoButtonColor = false
+toggleBtn.Active = true
+toggleBtn.Parent = screenGui
+Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 12)
+local btnStroke = Instance.new("UIStroke", toggleBtn)
+btnStroke.Color = Color3.fromRGB(90, 90, 110)
+btnStroke.Thickness = 1.5
+btnStroke.Transparency = 0.4
+
+toggleBtn.MouseEnter:Connect(function()
+    TweenService:Create(toggleBtn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(48, 48, 62)}):Play()
+end)
+toggleBtn.MouseLeave:Connect(function()
+    TweenService:Create(toggleBtn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(28, 28, 36)}):Play()
+end)
+
+--============================================================
+--  ГЛАВНАЯ ПАНЕЛЬ
+--============================================================
+local panel = Instance.new("Frame")
+panel.Name = "VisualsPanel"
+panel.Size = UDim2.new(0, 350, 0, 520)
+panel.Position = UDim2.new(0.5, -175, 0.5, -260)
+panel.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+panel.BackgroundTransparency = 0.03
+panel.Visible = false
+panel.Active = true
+panel.ClipsDescendants = true
+panel.Parent = screenGui
+Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 14)
+local panelStroke = Instance.new("UIStroke", panel)
+panelStroke.Color = Color3.fromRGB(70, 70, 85)
+panelStroke.Thickness = 1
+panelStroke.Transparency = 0.5
+
+-- Шапка
+local header = Instance.new("Frame")
+header.Name = "Header"
+header.Size = UDim2.new(1, 0, 0, 46)
+header.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+header.BorderSizePixel = 0
+header.Active = true
+header.Parent = panel
+Instance.new("UICorner", header).CornerRadius = UDim.new(0, 14)
+
+local headerFix = Instance.new("Frame")
+headerFix.Size = UDim2.new(1, 0, 0, 14)
+headerFix.Position = UDim2.new(0, 0, 1, -14)
+headerFix.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+headerFix.BorderSizePixel = 0
+headerFix.Parent = header
+
+local headerTitle = Instance.new("TextLabel")
+headerTitle.Size = UDim2.new(1, -60, 1, 0)
+headerTitle.Position = UDim2.new(0, 16, 0, 0)
+headerTitle.BackgroundTransparency = 1
+headerTitle.Text = "🎨 Visuals"
+headerTitle.TextColor3 = Color3.fromRGB(240, 240, 245)
+headerTitle.Font = Enum.Font.GothamBold
+headerTitle.TextSize = 17
+headerTitle.TextXAlignment = Enum.TextXAlignment.Left
+headerTitle.Parent = header
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 28, 0, 28)
+closeBtn.Position = UDim2.new(1, -38, 0, 9)
+closeBtn.BackgroundColor3 = Color3.fromRGB(60, 40, 40)
+closeBtn.BackgroundTransparency = 0.3
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = Color3.fromRGB(240, 200, 200)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 13
+closeBtn.Parent = header
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 8)
+
+-- Скролл-контент
+local content = Instance.new("ScrollingFrame")
+content.Size = UDim2.new(1, -20, 1, -60)
+content.Position = UDim2.new(0, 10, 0, 54)
+content.BackgroundTransparency = 1
+content.BorderSizePixel = 0
+content.ScrollBarThickness = 4
+content.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 120)
+content.CanvasSize = UDim2.new(0, 0, 0, 0)
+content.Parent = panel
+
+local layout = Instance.new("UIListLayout")
+layout.Padding = UDim.new(0, 6)
+layout.SortOrder = Enum.SortOrder.LayoutOrder
+layout.Parent = content
+
+-- Безопасное обновление размера холста
+local function updateCanvas()
+    task.wait()
+    content.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 20)
+end
+content.ChildAdded:Connect(updateCanvas)
+
+--============================================================
+--  ХЕЛПЕРЫ UI
+--============================================================
+local orderCounter = 0
+local function nextOrder()
+    orderCounter = orderCounter + 1
+    return orderCounter
+end
+
+local function createSectionHeader(text)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, 0, 0, 28)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.TextColor3 = Color3.fromRGB(160, 160, 180)
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 12
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.LayoutOrder = nextOrder()
+    lbl.Parent = content
+end
+
+local function createButton(text, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 36)
+    btn.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    btn.BackgroundTransparency = 0.15
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(230, 230, 235)
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 13
+    btn.AutoButtonColor = false
+    btn.LayoutOrder = nextOrder()
+    btn.Parent = content
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
+    btn.MouseEnter:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(50, 50, 65)}):Play()
+    end)
+    btn.MouseLeave:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(35, 35, 45)}):Play()
+    end)
+    btn.MouseButton1Click:Connect(callback)
+    return btn
+end
+
+local function createToggle(text, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 40)
+    btn.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    btn.BackgroundTransparency = 0.15
+    btn.Text = ""
+    btn.AutoButtonColor = false
+    btn.LayoutOrder = nextOrder()
+    btn.Parent = content
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, -70, 1, 0)
+    lbl.Position = UDim2.new(0, 14, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.TextColor3 = Color3.fromRGB(230, 230, 235)
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextSize = 13
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Parent = btn
+
+    local track = Instance.new("Frame")
+    track.Size = UDim2.new(0, 40, 0, 22)
+    track.Position = UDim2.new(1, -54, 0.5, -11)
+    track.BackgroundColor3 = Color3.fromRGB(55, 55, 68)
+    track.Parent = btn
+    Instance.new("UICorner", track).CornerRadius = UDim.new(1, 0)
+
+    local knob = Instance.new("Frame")
+    knob.Size = UDim2.new(0, 18, 0, 18)
+    knob.Position = UDim2.new(0, 2, 0.5, -9)
+    knob.BackgroundColor3 = Color3.fromRGB(230, 230, 235)
+    knob.Parent = track
+    Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+
+    local state = false
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        if state then
+            TweenService:Create(track, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(80, 180, 120)}):Play()
+            TweenService:Create(knob, TweenInfo.new(0.15), {Position = UDim2.new(1, -20, 0.5, -9)}):Play()
+        else
+            TweenService:Create(track, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(55, 55, 68)}):Play()
+            TweenService:Create(knob, TweenInfo.new(0.15), {Position = UDim2.new(0, 2, 0.5, -9)}):Play()
+        end
+        callback(state)
+    end)
+    return btn
+end
+
+local function createSlider(text, min, max, default, callback)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 0, 50)
+    frame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    frame.BackgroundTransparency = 0.15
+    frame.LayoutOrder = nextOrder()
+    frame.Parent = content
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 7)
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, -20, 0, 20)
+    lbl.Position = UDim2.new(0, 14, 0, 4)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text .. ": " .. tostring(default)
+    lbl.TextColor3 = Color3.fromRGB(230, 230, 235)
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextSize = 13
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Parent = frame
+
+    local bar = Instance.new("Frame")
+    bar.Size = UDim2.new(1, -28, 0, 6)
+    bar.Position = UDim2.new(0, 14, 0, 32)
+    bar.BackgroundColor3 = Color3.fromRGB(55, 55, 68)
+    bar.Parent = frame
+    Instance.new("UICorner", bar).CornerRadius = UDim.new(1, 0)
+
+    local fill = Instance.new("Frame")
+    fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+    fill.BackgroundColor3 = Color3.fromRGB(80, 180, 120)
+    fill.Parent = bar
+    Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
+
+    local knob = Instance.new("Frame")
+    knob.Size = UDim2.new(0, 16, 0, 16)
+    knob.Position = UDim2.new((default - min) / (max - min), -8, 0.5, -8)
+    knob.BackgroundColor3 = Color3.fromRGB(230, 230, 235)
+    knob.Parent = bar
+    Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+
+    local dragging = false
+
+    local function update(input)
+        if bar.AbsoluteSize.X <= 0 then return end
+        local relX = math.clamp(input.Position.X - bar.AbsolutePosition.X, 0, bar.AbsoluteSize.X)
+        local percent = relX / bar.AbsoluteSize.X
+        local value = math.floor(min + (max - min) * percent)
+        
+        fill.Size = UDim2.new(percent, 0, 1, 0)
+        knob.Position = UDim2.new(percent, -8, 0.5, -8)
+        lbl.Text = text .. ": " .. tostring(value)
+        callback(value)
+    end
+
+    bar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            update(input)
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            update(input)
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+end
+
+--============================================================
+--  ПЕРЕТАСКИВАНИЕ
+--============================================================
+local function makeDraggable(dragPart, target, onClick)
+    local dragging, dragStart, startPos = false, nil, nil
+    local moved = false
+    dragPart.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            moved = false
+            dragStart = input.Position
+            startPos = target.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                    if not moved and onClick then onClick() end
+                end
+            end)
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            if math.abs(delta.X) > 4 or math.abs(delta.Y) > 4 then moved = true end
+            target.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + delta.X,
+                startPos.Y.Scale, startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+end
+
+makeDraggable(toggleBtn, toggleBtn, function() panel.Visible = not panel.Visible end)
+makeDraggable(header, panel)
+closeBtn.MouseButton1Click:Connect(function() panel.Visible = false end)
+
+--============================================================
+--  ФУНКЦИИ СКРИПТА
+--============================================================
+local function setSkybox(data)
+    local sky = Lighting:FindFirstChildOfClass("Sky")
+    if not sky then
+        sky = Instance.new("Sky")
+        sky.Name = "CustomSkybox"
+        sky.Parent = Lighting
+    end
+    if type(data.id) == "table" then
+        sky.SkyboxBk = "rbxassetid://" .. data.id[1]
+        sky.SkyboxDn = "rbxassetid://" .. data.id[2]
+        sky.SkyboxFt = "rbxassetid://" .. data.id[3]
+        sky.SkyboxLf = "rbxassetid://" .. data.id[4]
+        sky.SkyboxRt = "rbxassetid://" .. data.id[5]
+        sky.SkyboxUp = "rbxassetid://" .. data.id[6]
+    else
+        local id = "rbxassetid://" .. tostring(data.id)
+        sky.SkyboxBk = id
+        sky.SkyboxDn = id
+        sky.SkyboxFt = id
+        sky.SkyboxLf = id
+        sky.SkyboxRt = id
+        sky.SkyboxUp = id
+    end
+end
+
+local function resetSkybox()
+    local sky = Lighting:FindFirstChildOfClass("Sky")
+    if sky and sky.Name == "CustomSkybox" then sky:Destroy() end
+end
+
+local function toggleFPS(state)
+    pcall(function()
+        if setfpscap then setfpscap(state and 0 or 60) end
+    end)
+end
+
+local particlesBlack = false
+local function applyBlackParticles(state)
+    particlesBlack = state
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("ParticleEmitter") then
+            obj.Color = state and ColorSequence.new(Color3.new(0,0,0)) or ColorSequence.new(Color3.new(1,1,1))
+        end
+    end
+end
+
+Workspace.DescendantAdded:Connect(function(obj)
+    if particlesBlack and obj:IsA("ParticleEmitter") then
+        obj.Color = ColorSequence.new(Color3.new(0,0,0))
+    end
+end)
+
+local blackObjectsState = false
+local objectBackup = {}
+
+local function makeObjectBlack(obj)
+    if obj:IsA("BasePart") then
+        if not objectBackup[obj] then objectBackup[obj] = {Color = obj.Color} end
+        obj.Color = Color3.new(0, 0, 0)
+    elseif obj:IsA("Texture") or obj:IsA("Decal") then
+        if not objectBackup[obj] then objectBackup[obj] = {Color3 = obj.Color3} end
+        obj.Color3 = Color3.new(0, 0, 0)
+    end
+end
+
+local function applyBlackObjects(state)
+    blackObjectsState = state
+    if state then
+        task.spawn(function()
+            for _, obj in ipairs(Workspace:GetDescendants()) do
+                if obj:IsA("BasePart") or obj:IsA("Texture") or obj:IsA("Decal") then
+                    makeObjectBlack(obj)
+                end
+            end
+        end)
+    else
+        for obj, data in pairs(objectBackup) do
+            if obj and obj.Parent then
+                if obj:IsA("BasePart") and data.Color then obj.Color = data.Color end
+                if (obj:IsA("Texture") or obj:IsA("Decal")) and data.Color3 then obj.Color3 = data.Color3 end
+            end
+        end
+        objectBackup = {}
+    end
+end
+
+Workspace.DescendantAdded:Connect(function(obj)
+    if blackObjectsState then
+        if obj:IsA("BasePart") or obj:IsA("Texture") or obj:IsA("Decal") then
+            makeObjectBlack(obj)
+        end
+    end
+end)
+
+local optimizationBackup = {}
+local function applyOptimization(state)
+    if state then
+        optimizationBackup.Lighting = {
+            GlobalShadows = Lighting.GlobalShadows,
+            Brightness = Lighting.Brightness,
+            EnvironmentDiffuseScale = Lighting.EnvironmentDiffuseScale,
+            EnvironmentSpecularScale = Lighting.EnvironmentSpecularScale,
+            FogEnd = Lighting.FogEnd,
+        }
+        optimizationBackup.PostEffects = {}
+        optimizationBackup.Parts = {}
+
+        Lighting.GlobalShadows = false
+        Lighting.Brightness = 1
+        Lighting.EnvironmentDiffuseScale = 0
+        Lighting.EnvironmentSpecularScale = 0
+        Lighting.FogEnd = 1e9
+
+        for _, v in ipairs(Lighting:GetChildren()) do
+            if v:IsA("PostEffect") then
+                optimizationBackup.PostEffects[v] = v.Enabled
+                v.Enabled = false
+            end
+        end
+
+        local terrain = Workspace:FindFirstChildOfClass("Terrain")
+        if terrain then
+            optimizationBackup.Terrain = {
+                WaveSize = terrain.WaterWaveSize,
+                WaveSpeed = terrain.WaterWaveSpeed,
+                Reflectance = terrain.WaterReflectance,
+                Transparency = terrain.WaterTransparency,
+            }
+            terrain.WaterWaveSize = 0
+            terrain.WaterWaveSpeed = 0
+            terrain.WaterReflectance = 0
+            terrain.WaterTransparency = 1
+        end
+
+        task.spawn(function()
+            local count = 0
+            for _, obj in ipairs(Workspace:GetDescendants()) do
+                if obj:IsA("BasePart") then
+                    optimizationBackup.Parts[obj] = {
+                        Material = obj.Material,
+                        Reflectance = obj.Reflectance,
+                        CastShadow = obj.CastShadow,
+                    }
+                    obj.Material = Enum.Material.SmoothPlastic
+                    obj.Reflectance = 0
+                    obj.CastShadow = false
+                    count = count + 1
+                    if count % 100 == 0 then task.wait() end
+                end
+            end
+        end)
+    else
+        local lb = optimizationBackup.Lighting
+        if lb then
+            Lighting.GlobalShadows = lb.GlobalShadows
+            Lighting.Brightness = lb.Brightness
+            Lighting.EnvironmentDiffuseScale = lb.EnvironmentDiffuseScale
+            Lighting.EnvironmentSpecularScale = lb.EnvironmentSpecularScale
+            Lighting.FogEnd = lb.FogEnd
+        end
+        for obj, enabled in pairs(optimizationBackup.PostEffects or {}) do
+            if obj and obj.Parent then obj.Enabled = enabled end
+        end
+        local terrain = Workspace:FindFirstChildOfClass("Terrain")
+        local tb = optimizationBackup.Terrain
+        if tb and terrain then
+            terrain.WaterWaveSize = tb.WaveSize
+            terrain.WaterWaveSpeed = tb.WaveSpeed
+            terrain.WaterReflectance = tb.Reflectance
+            terrain.WaterTransparency = tb.Transparency
+        end
+        for obj, data in pairs(optimizationBackup.Parts or {}) do
+            if obj and obj.Parent then
+                obj.Material = data.Material
+                obj.Reflectance = data.Reflectance
+                obj.CastShadow = data.CastShadow
+            end
+        end
+        optimizationBackup = {}
+    end
+end
+
+--============================================================
+--  ЗАПОЛНЕНИЕ ПАНЕЛИ
+--============================================================
+createSectionHeader("🎥 Камера")
+createSlider("Угол обзора (FOV)", 50, 120, 70, function(value)
+    if Workspace.CurrentCamera then Workspace.CurrentCamera.FieldOfView = value end
+end)
+
+createSectionHeader("🌌 Скайбоксы")
+createButton("Тропики",         function() setSkybox({ id = 169210149 }) end)
+createButton("Галактика",       function()
+    setSkybox({ id = { 159454299, 159454296, 159454292, 159454289, 159454294, 159454297 } })
+end)
+createButton("Голубая ночь",    function()
+    setSkybox({ id = { 1233158420, 1233158838, 1233157105, 1233157640, 1233157995, 123315915
