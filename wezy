@@ -1,0 +1,766 @@
+--==================================================================
+--  NEBESNY VISUAL (ERIS EDITION) - ЧАСТЬ 1
+--==================================================================
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+if PlayerGui:FindFirstChild("NebesnyVisualGui") then PlayerGui.NebesnyVisualGui:Destroy() end
+if PlayerGui:FindFirstChild("NebesnyStatsGui") then PlayerGui.NebesnyStatsGui:Destroy() end
+
+local Theme = {
+    Background = Color3.fromRGB(18, 18, 22),
+    Sidebar = Color3.fromRGB(14, 14, 18),
+    Element = Color3.fromRGB(28, 28, 35),
+    ElementHover = Color3.fromRGB(38, 38, 48),
+    Accent = Color3.fromRGB(80, 180, 120),
+    Text = Color3.fromRGB(240, 240, 245),
+    SubText = Color3.fromRGB(150, 150, 160)
+}
+
+local MainGui = Instance.new("ScreenGui")
+MainGui.Name = "NebesnyVisualGui"
+MainGui.ResetOnSpawn = false
+MainGui.DisplayOrder = 999
+MainGui.Parent = PlayerGui
+
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Size = UDim2.new(0, 160, 0, 40)
+ToggleBtn.Position = UDim2.new(0, 20, 0, 80)
+ToggleBtn.BackgroundColor3 = Theme.Background
+ToggleBtn.Text = "🌌 NEBESNY VISUAL"
+ToggleBtn.TextColor3 = Theme.Text
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.TextSize = 13
+ToggleBtn.Parent = MainGui
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 8)
+
+local Window = Instance.new("Frame")
+Window.Size = UDim2.new(0, 600, 0, 380)
+Window.Position = UDim2.new(0.5, -300, 0.5, -190)
+Window.BackgroundColor3 = Theme.Background
+Window.Visible = false
+Window.Active = true
+Window.Parent = MainGui
+Instance.new("UICorner", Window).CornerRadius = UDim.new(0, 10)
+local Stroke = Instance.new("UIStroke", Window)
+Stroke.Color = Color3.fromRGB(50, 50, 60)
+
+local TopBar = Instance.new("Frame")
+TopBar.Size = UDim2.new(1, 0, 0, 40)
+TopBar.BackgroundTransparency = 1
+TopBar.Active = true
+TopBar.Parent = Window
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -40, 1, 0)
+Title.Position = UDim2.new(0, 20, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "Nebesny Visual"
+Title.TextColor3 = Theme.Text
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 18
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = TopBar
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 28, 0, 28)
+CloseBtn.Position = UDim2.new(1, -38, 0, 6)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(50, 30, 30)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextSize = 14
+CloseBtn.Parent = TopBar
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
+
+local Line = Instance.new("Frame")
+Line.Size = UDim2.new(1, -20, 0, 1)
+Line.Position = UDim2.new(0, 10, 0, 40)
+Line.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+Line.Parent = Window
+
+local Sidebar = Instance.new("Frame")
+Sidebar.Size = UDim2.new(0, 140, 1, -50)
+Sidebar.Position = UDim2.new(0, 5, 0, 45)
+Sidebar.BackgroundColor3 = Theme.Sidebar
+Sidebar.Parent = Window
+Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 8)
+
+local SidebarLayout = Instance.new("UIListLayout")
+SidebarLayout.Padding = UDim.new(0, 4)
+SidebarLayout.SortOrder = Enum.SortOrder.LayoutOrder
+SidebarLayout.Parent = Sidebar
+
+local ContentArea = Instance.new("Frame")
+ContentArea.Size = UDim2.new(1, -155, 1, -50)
+ContentArea.Position = UDim2.new(0, 150, 0, 45)
+ContentArea.BackgroundTransparency = 1
+ContentArea.Parent = Window
+
+local Tabs = {}
+local ActiveTab = nil
+
+local function CreateTab(name, icon)
+    local TabBtn = Instance.new("TextButton")
+    TabBtn.Size = UDim2.new(1, -10, 0, 34)
+    TabBtn.BackgroundColor3 = Theme.Sidebar
+    TabBtn.Text = "  " .. icon .. "  " .. name
+    TabBtn.TextColor3 = Theme.SubText
+    TabBtn.Font = Enum.Font.GothamSemibold
+    TabBtn.TextSize = 13
+    TabBtn.TextXAlignment = Enum.TextXAlignment.Left
+    TabBtn.AutoButtonColor = false
+    TabBtn.Parent = Sidebar
+    Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 6)
+
+    local ScrollFrame = Instance.new("ScrollingFrame")
+    ScrollFrame.Size = UDim2.new(1, 0, 1, 0)
+    ScrollFrame.BackgroundTransparency = 1
+    ScrollFrame.BorderSizePixel = 0
+    ScrollFrame.ScrollBarThickness = 3
+    ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 90)
+    ScrollFrame.Visible = false
+    ScrollFrame.Parent = ContentArea
+
+    local Layout = Instance.new("UIListLayout")
+    Layout.Padding = UDim.new(0, 8)
+    Layout.Parent = ScrollFrame
+
+    Layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, Layout.AbsoluteContentSize.Y + 20)
+    end)
+
+    Tabs[name] = { Btn = TabBtn, Frame = ScrollFrame }
+
+    TabBtn.MouseEnter:Connect(function()
+        if ActiveTab ~= name then TabBtn.BackgroundColor3 = Theme.Element end
+    end)
+    TabBtn.MouseLeave:Connect(function()
+        if ActiveTab ~= name then TabBtn.BackgroundColor3 = Theme.Sidebar end
+    end)
+
+    TabBtn.MouseButton1Click:Connect(function()
+        for tName, tData in pairs(Tabs) do
+            tData.Btn.BackgroundColor3 = Theme.Sidebar
+            tData.Btn.TextColor3 = Theme.SubText
+            tData.Frame.Visible = false
+        end
+        TabBtn.BackgroundColor3 = Theme.Element
+        TabBtn.TextColor3 = Theme.Text
+        ScrollFrame.Visible = true
+        ActiveTab = name
+    end)
+    return ScrollFrame, TabBtn
+end
+
+local function AddSection(parent, text)
+    local Frame = Instance.new("Frame")
+    Frame.Size = UDim2.new(1, -10, 0, 26)
+    Frame.BackgroundTransparency = 1
+    Frame.Parent = parent
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(1, 0, 1, 0)
+    Label.BackgroundTransparency = 1
+    Label.Text = text
+    Label.TextColor3 = Theme.Text
+    Label.Font = Enum.Font.GothamBold
+    Label.TextSize = 13
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = Frame
+end
+
+local function AddButton(parent, text, callback)
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(1, -10, 0, 32)
+    Btn.BackgroundColor3 = Theme.Element
+    Btn.Text = text
+    Btn.TextColor3 = Theme.Text
+    Btn.Font = Enum.Font.Gotham
+    Btn.TextSize = 13
+    Btn.AutoButtonColor = false
+    Btn.Parent = parent
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
+    Btn.MouseEnter:Connect(function() TweenService:Create(Btn, TweenInfo.new(0.2), {BackgroundColor3 = Theme.ElementHover}):Play() end)
+    Btn.MouseLeave:Connect(function() TweenService:Create(Btn, TweenInfo.new(0.2), {BackgroundColor3 = Theme.Element}):Play() end)
+    Btn.MouseButton1Click:Connect(function() pcall(callback) end)
+    return Btn
+end
+
+local function AddToggle(parent, text, default, callback)
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(1, -10, 0, 36)
+    Btn.BackgroundColor3 = Theme.Element
+    Btn.Text = ""
+    Btn.AutoButtonColor = false
+    Btn.Parent = parent
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(1, -60, 1, 0)
+    Label.Position = UDim2.new(0, 12, 0, 0)
+    Label.BackgroundTransparency = 1
+    Label.Text = text
+    Label.TextColor3 = Theme.Text
+    Label.Font = Enum.Font.Gotham
+    Label.TextSize = 13
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = Btn
+    local Track = Instance.new("Frame")
+    Track.Size = UDim2.new(0, 34, 0, 18)
+    Track.Position = UDim2.new(1, -46, 0.5, -9)
+    Track.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+    Track.Parent = Btn
+    Instance.new("UICorner", Track).CornerRadius = UDim.new(1, 0)
+    local Knob = Instance.new("Frame")
+    Knob.Size = UDim2.new(0, 14, 0, 14)
+    Knob.Position = UDim2.new(0, 2, 0.5, -7)
+    Knob.BackgroundColor3 = Theme.Text
+    Knob.Parent = Track
+    Instance.new("UICorner", Knob).CornerRadius = UDim.new(1, 0)
+    local State = default or false
+    local function UpdateVisual()
+        if State then
+            TweenService:Create(Track, TweenInfo.new(0.2), {BackgroundColor3 = Theme.Accent}):Play()
+            TweenService:Create(Knob, TweenInfo.new(0.2), {Position = UDim2.new(1, -16, 0.5, -7)}):Play()
+        else
+            TweenService:Create(Track, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(50, 50, 60)}):Play()
+            TweenService:Create(Knob, TweenInfo.new(0.2), {Position = UDim2.new(0, 2, 0.5, -7)}):Play()
+        end
+    end
+    if State then UpdateVisual() end
+    Btn.MouseButton1Click:Connect(function()
+        State = not State
+        UpdateVisual()
+        pcall(function() callback(State) end)
+    end)
+end
+
+local function AddSlider(parent, text, min, max, default, callback)
+    local Frame = Instance.new("Frame")
+    Frame.Size = UDim2.new(1, -10, 0, 46)
+    Frame.BackgroundColor3 = Theme.Element
+    Frame.Parent = parent
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(1, -20, 0, 20)
+    Label.Position = UDim2.new(0, 12, 0, 4)
+    Label.BackgroundTransparency = 1
+    Label.Text = text .. ": " .. tostring(default)
+    Label.TextColor3 = Theme.Text
+    Label.Font = Enum.Font.Gotham
+    Label.TextSize = 13
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = Frame
+    local Bar = Instance.new("Frame")
+    Bar.Size = UDim2.new(1, -24, 0, 4)
+    Bar.Position = UDim2.new(0, 12, 0, 30)
+    Bar.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+    Bar.Parent = Frame
+    Instance.new("UICorner", Bar).CornerRadius = UDim.new(1, 0)
+    local Fill = Instance.new("Frame")
+    Fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+    Fill.BackgroundColor3 = Theme.Accent
+    Fill.Parent = Bar
+    Instance.new("UICorner", Fill).CornerRadius = UDim.new(1, 0)
+    local Knob = Instance.new("Frame")
+    Knob.Size = UDim2.new(0, 12, 0, 12)
+    Knob.Position = UDim2.new((default - min) / (max - min), -6, 0.5, -6)
+    Knob.BackgroundColor3 = Theme.Text
+    Knob.Parent = Bar
+    Instance.new("UICorner", Knob).CornerRadius = UDim.new(1, 0)
+    local Dragging = false
+    local function Update(input)
+        if Bar.AbsoluteSize.X <= 0 then return end
+        local relX = math.clamp(input.Position.X - Bar.AbsolutePosition.X, 0, Bar.AbsoluteSize.X)
+        local percent = relX / Bar.AbsoluteSize.X
+        local value = math.floor(min + (max - min) * percent)
+        Fill.Size = UDim2.new(percent, 0, 1, 0)
+        Knob.Position = UDim2.new(percent, -6, 0.5, -6)
+        Label.Text = text .. ": " .. tostring(value)
+        pcall(function() callback(value) end)
+    end
+    Bar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            Dragging = true
+            Update(input)
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if Dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            Update(input)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            Dragging = false
+        end
+    end)
+end
+
+local function AddDropdown(parent, text, options, callback)
+    local MainBtn = Instance.new("TextButton")
+    MainBtn.Size = UDim2.new(1, -10, 0, 36)
+    MainBtn.BackgroundColor3 = Theme.Element
+    MainBtn.Text = "  " .. text .. " ▼"
+    MainBtn.TextColor3 = Theme.Text
+    MainBtn.Font = Enum.Font.Gotham
+    MainBtn.TextSize = 13
+    MainBtn.TextXAlignment = Enum.TextXAlignment.Left
+    MainBtn.AutoButtonColor = false
+    MainBtn.ZIndex = 2
+    MainBtn.Parent = parent
+    Instance.new("UICorner", MainBtn).CornerRadius = UDim.new(0, 6)
+    local List = Instance.new("ScrollingFrame")
+    List.Size = UDim2.new(1, -10, 0, 0)
+    List.BackgroundColor3 = Theme.Sidebar
+    List.BorderSizePixel = 0
+    List.ScrollBarThickness = 3
+    List.Visible = false
+    List.ZIndex = 3
+    List.Parent = parent
+    Instance.new("UICorner", List).CornerRadius = UDim.new(0, 6)
+    local ListLayout = Instance.new("UIListLayout")
+    ListLayout.Padding = UDim.new(0, 2)
+    ListLayout.Parent = List
+    local isOpen = false
+    local function UpdateListSize()
+        List.Size = UDim2.new(1, -10, 0, math.min(#options * 28, 150))
+        List.CanvasSize = UDim2.new(0, 0, 0, ListLayout.AbsoluteContentSize.Y + 4)
+    end
+    MainBtn.MouseButton1Click:Connect(function()
+        isOpen = not isOpen
+        List.Visible = isOpen
+        MainBtn.Text = "  " .. text .. (isOpen and " ▲" or " ▼")
+        if isOpen then UpdateListSize() end
+    end)
+    for _, opt in ipairs(options) do
+        local OptBtn = Instance.new("TextButton")
+        OptBtn.Size = UDim2.new(1, 0, 0, 26)
+        OptBtn.BackgroundColor3 = Theme.Sidebar
+        OptBtn.Text = "  " .. opt
+        OptBtn.TextColor3 = Theme.SubText
+        OptBtn.Font = Enum.Font.Gotham
+        OptBtn.TextSize = 12
+        OptBtn.TextXAlignment = Enum.TextXAlignment.Left
+        OptBtn.AutoButtonColor = false
+        OptBtn.ZIndex = 4
+        OptBtn.Parent = List
+        OptBtn.MouseEnter:Connect(function() OptBtn.BackgroundColor3 = Theme.Element end)
+        OptBtn.MouseLeave:Connect(function() OptBtn.BackgroundColor3 = Theme.Sidebar end)
+        OptBtn.MouseButton1Click:Connect(function()
+            MainBtn.Text = "  " .. text .. ": " .. opt .. " ▼"
+            isOpen = false
+            List.Visible = false
+            pcall(function() callback(opt) end)
+        end)
+    end
+end
+
+local function MakeDraggable(DragPart, Target)
+    local Dragging, DragStart, StartPos = false, nil, nil
+    DragPart.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            Dragging = true
+            DragStart = input.Position
+            StartPos = Target.Position
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if Dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - DragStart
+            Target.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + delta.X, StartPos.Y.Scale, StartPos.Y.Offset + delta.Y)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            Dragging = false
+        end
+    end)
+end
+MakeDraggable(TopBar, Window)--==================================================================
+--  NEBESNY VISUAL (ERIS EDITION) - ЧАСТЬ 2
+--==================================================================
+local SkyboxPresets = {
+    ["HD"] = { Bk = "http://www.roblox.com/asset/?id=16553658937", Dn = "http://www.roblox.com/asset/?id=16553660713", Ft = "http://www.roblox.com/asset/?id=16553662144", Lf = "http://www.roblox.com/asset/?id=16553664042", Rt = "http://www.roblox.com/asset/?id=16553665766", Up = "http://www.roblox.com/asset/?id=16553667750" },
+    ["Black Storm"] = { Bk = "rbxassetid://15502511288", Dn = "rbxassetid://15502508460", Ft = "rbxassetid://15502510289", Lf = "rbxassetid://15502507918", Rt = "rbxassetid://15502509398", Up = "rbxassetid://15502511911" },
+    ["Snow"] = { Bk = "http://www.roblox.com/asset/?id=155657655", Dn = "http://www.roblox.com/asset/?id=155674246", Ft = "http://www.roblox.com/asset/?id=155657609", Lf = "http://www.roblox.com/asset/?id=155657671", Rt = "http://www.roblox.com/asset/?id=155657619", Up = "http://www.roblox.com/asset/?id=155674931" },
+    ["Blue Space"] = { Bk = "rbxassetid://15536110634", Dn = "rbxassetid://15536112543", Ft = "rbxassetid://15536116141", Lf = "rbxassetid://15536114370", Rt = "rbxassetid://15536118762", Up = "rbxassetid://15536117282" },
+    ["Realistic"] = { Bk = "rbxassetid://653719502", Dn = "rbxassetid://653718790", Ft = "rbxassetid://653719067", Lf = "rbxassetid://653719190", Rt = "rbxassetid://653718931", Up = "rbxassetid://653719321" },
+    ["Sunset"] = { Bk = "rbxassetid://600830446", Dn = "rbxassetid://600831635", Ft = "rbxassetid://600832720", Lf = "rbxassetid://600886090", Rt = "rbxassetid://600833862", Up = "rbxassetid://600835177" },
+    ["Space"] = { Bk = "http://www.roblox.com/asset/?id=166509999", Dn = "http://www.roblox.com/asset/?id=166510057", Ft = "http://www.roblox.com/asset/?id=166510116", Lf = "http://www.roblox.com/asset/?id=166510092", Rt = "http://www.roblox.com/asset/?id=166510131", Up = "http://www.roblox.com/asset/?id=166510114" },
+    ["Pink"] = { Bk = "rbxassetid://12216109205", Dn = "rbxassetid://12216109875", Ft = "rbxassetid://12216109489", Lf = "rbxassetid://12216110170", Rt = "rbxassetid://12216110471", Up = "rbxassetid://12216108877" },
+    ["Galaxy"] = { Bk = "rbxassetid://15983968922", Dn = "rbxassetid://15983966825", Ft = "rbxassetid://15983965025", Lf = "rbxassetid://15983967420", Rt = "rbxassetid://15983966246", Up = "rbxassetid://15983964246" },
+    ["Roblox Default"] = { Bk = "rbxasset://textures/sky/sky512_bk.tex", Dn = "rbxasset://textures/sky/sky512_dn.tex", Ft = "rbxasset://textures/sky/sky512_ft.tex", Lf = "rbxasset://textures/sky/sky512_lf.tex", Rt = "rbxasset://textures/sky/sky512_rt.tex", Up = "rbxasset://textures/sky/sky512_up.tex" }
+}
+
+local ShaderPresets = {
+    ["Ночь"] = { Brightness = 2, Ambient = Color3.fromRGB(60, 70, 130), OutdoorAmbient = Color3.fromRGB(70, 80, 150), ClockTime = 12, FogEnd = 100000, FogStart = 90000, ExposureCompensation = 0.3, CC = { Brightness = 0, Contrast = 0.1, Saturation = -0.1, Tint = Color3.fromRGB(120, 140, 220) }, Bloom = { Intensity = 0.6, Size = 32, Threshold = 0.7 } },
+    ["Вечер"] = { Brightness = 2.5, Ambient = Color3.fromRGB(170, 110, 75), OutdoorAmbient = Color3.fromRGB(190, 120, 85), ClockTime = 12, FogEnd = 100000, FogStart = 90000, ExposureCompensation = 0.4, CC = { Brightness = 0, Contrast = 0.1, Saturation = 0.2, Tint = Color3.fromRGB(255, 200, 160) }, Bloom = { Intensity = 0.6, Size = 32, Threshold = 0.7 } },
+    ["Неон"] = { Brightness = 2.5, Ambient = Color3.fromRGB(80, 40, 120), OutdoorAmbient = Color3.fromRGB(90, 50, 140), ClockTime = 22, FogEnd = 1500, FogStart = 200, ExposureCompensation = 0.3, CC = { Brightness = 0, Contrast = 0.4, Saturation = 0.8, Tint = Color3.fromRGB(180, 100, 255) }, Bloom = { Intensity = 1.3, Size = 44, Threshold = 0.35 } },
+    ["Холодный"] = { Brightness = 2.5, Ambient = Color3.fromRGB(120, 140, 180), OutdoorAmbient = Color3.fromRGB(140, 160, 200), ClockTime = 12, FogEnd = 100000, FogStart = 90000, ExposureCompensation = 0.1, CC = { Brightness = 0, Contrast = 0.1, Saturation = 0.1, Tint = Color3.fromRGB(150, 180, 255) }, Bloom = { Intensity = 0.4, Size = 24, Threshold = 0.8 } },
+    ["Тёплый"] = { Brightness = 2.5, Ambient = Color3.fromRGB(180, 140, 100), OutdoorAmbient = Color3.fromRGB(200, 160, 120), ClockTime = 12, FogEnd = 100000, FogStart = 90000, ExposureCompensation = 0.2, CC = { Brightness = 0.02, Contrast = 0.1, Saturation = 0.3, Tint = Color3.fromRGB(255, 200, 150) }, Bloom = { Intensity = 0.5, Size = 28, Threshold = 0.6 } }
+}
+
+local JumpCircleTexture = "rbxassetid://117117534447665"
+local BlackholeTexture = "rbxassetid://5436396975"
+
+local function ApplySkybox(skyName)
+    local preset = SkyboxPresets[skyName]
+    if not preset then return end
+    local sky = Lighting:FindFirstChild("Nebesny_Sky")
+    if not sky then
+        sky = Instance.new("Sky")
+        sky.Name = "Nebesny_Sky"
+        sky.Parent = Lighting
+    end
+    sky.SkyboxBk = preset.Bk
+    sky.SkyboxDn = preset.Dn
+    sky.SkyboxFt = preset.Ft
+    sky.SkyboxLf = preset.Lf
+    sky.SkyboxRt = preset.Rt
+    sky.SkyboxUp = preset.Up
+end
+
+local function RestoreSkybox()
+    local sky = Lighting:FindFirstChild("Nebesny_Sky")
+    if sky then sky:Destroy() end
+end
+
+local ShaderObjects = {}
+local function ApplyShader(presetName)
+    local preset = ShaderPresets[presetName]
+    if not preset then return end
+    Lighting.Brightness = preset.Brightness
+    Lighting.Ambient = preset.Ambient
+    Lighting.OutdoorAmbient = preset.OutdoorAmbient
+    Lighting.ClockTime = preset.ClockTime
+    Lighting.FogEnd = preset.FogEnd
+    Lighting.FogStart = preset.FogStart
+    Lighting.ExposureCompensation = preset.ExposureCompensation
+    if not ShaderObjects.CC then
+        ShaderObjects.CC = Instance.new("ColorCorrectionEffect")
+        ShaderObjects.CC.Name = "Nebesny_CC"
+        ShaderObjects.CC.Parent = Lighting
+    end
+    ShaderObjects.CC.Brightness = preset.CC.Brightness
+    ShaderObjects.CC.Contrast = preset.CC.Contrast
+    ShaderObjects.CC.Saturation = preset.CC.Saturation
+    ShaderObjects.CC.Tint = preset.CC.Tint
+    if not ShaderObjects.Bloom then
+        ShaderObjects.Bloom = Instance.new("BloomEffect")
+        ShaderObjects.Bloom.Name = "Nebesny_Bloom"
+        ShaderObjects.Bloom.Parent = Lighting
+    end
+    ShaderObjects.Bloom.Intensity = preset.Bloom.Intensity
+    ShaderObjects.Bloom.Size = preset.Bloom.Size
+    ShaderObjects.Bloom.Threshold = preset.Bloom.Threshold
+end
+
+local function RestoreShader()
+    Lighting.Brightness = 2
+    Lighting.Ambient = Color3.fromRGB(70, 70, 70)
+    Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+    Lighting.ClockTime = 14
+    Lighting.FogEnd = 100000
+    Lighting.FogStart = 0
+    Lighting.ExposureCompensation = 0
+    if ShaderObjects.CC then ShaderObjects.CC:Destroy() end
+    if ShaderObjects.Bloom then ShaderObjects.Bloom:Destroy() end
+    ShaderObjects = {}
+end
+
+local JumpCirclePart = nil
+local TraceLine = nil
+local BlackholePart = nil
+
+local function ToggleJumpCircle(state)
+    if state then
+        if not JumpCirclePart then
+            JumpCirclePart = Instance.new("Part")
+            JumpCirclePart.Size = Vector3.new(8, 0.5, 8)
+            JumpCirclePart.Shape = Enum.PartType.Cylinder
+            JumpCirclePart.Material = Enum.Material.Neon
+            JumpCirclePart.Color = Color3.fromRGB(255, 255, 255)
+            JumpCirclePart.CanCollide = false
+            JumpCirclePart.Anchored = true
+            JumpCirclePart.Transparency = 0.4
+            JumpCirclePart.Parent = Workspace
+            local decal = Instance.new("Decal")
+            decal.Texture = JumpCircleTexture
+            decal.Face = Enum.NormalId.Top
+            decal.Parent = JumpCirclePart
+        end
+        JumpCirclePart.Transparency = 0.4
+    else
+        if JumpCirclePart then JumpCirclePart.Transparency = 1 end
+    end
+end
+
+RunService.Heartbeat:Connect(function()
+    if JumpCirclePart and JumpCirclePart.Transparency < 1 then
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            JumpCirclePart.CFrame = CFrame.new(hrp.Position - Vector3.new(0, 2.8, 0)) * CFrame.Angles(0, 0, math.rad(90))
+        end
+    end
+end)
+
+local function ToggleTrace(state)
+    if state then
+        if not TraceLine then
+            TraceLine = Instance.new("Part")
+            TraceLine.Anchored = true
+            TraceLine.CanCollide = false
+            TraceLine.Material = Enum.Material.Neon
+            TraceLine.Color = Color3.fromRGB(255, 0, 0)
+            TraceLine.Parent = Workspace
+        end
+        TraceLine.Transparency = 0.5
+    else
+        if TraceLine then TraceLine.Transparency = 1 end
+    end
+end
+
+RunService.Heartbeat:Connect(function()
+    if TraceLine and TraceLine.Transparency < 1 then
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        local closestPlayer, shortestDist = nil, math.huge
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local dist = (player.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
+                if dist < shortestDist then
+                    shortestDist = dist
+                    closestPlayer = player
+                end
+            end
+        end
+        if hrp and closestPlayer then
+            local targetPos = closestPlayer.Character.HumanoidRootPart.Position
+            local distance = (targetPos - hrp.Position).Magnitude
+            TraceLine.Size = Vector3.new(0.2, 0.2, distance)
+            TraceLine.CFrame = CFrame.lookAt(hrp.Position, targetPos) * CFrame.new(0, 0, -distance/2)
+        else
+            TraceLine.Transparency = 1
+        end
+    end
+end)
+
+local function ToggleBlackhole(state)
+    if state then
+        if not BlackholePart then
+            BlackholePart = Instance.new("Part")
+            BlackholePart.Size = Vector3.new(40, 40, 40)
+            BlackholePart.Shape = Enum.PartType.Ball
+            BlackholePart.Material = Enum.Material.SmoothPlastic
+            BlackholePart.Color = Color3.fromRGB(0, 0, 0)
+            BlackholePart.Anchored = true
+            BlackholePart.CanCollide = false
+            BlackholePart.Transparency = 0
+            BlackholePart.Parent = Workspace
+            local decal = Instance.new("Decal")
+            decal.Texture = BlackholeTexture
+            decal.Face = Enum.NormalId.Front
+            decal.Parent = BlackholePart
+        end
+        BlackholePart.Transparency = 0
+    else
+        if BlackholePart then BlackholePart.Transparency = 1 end
+    end
+end
+
+local function WaterAction(action, color)
+    local t = Workspace:FindFirstChildOfClass("Terrain")
+    if t then
+        if action == "remove" then
+            t.WaterTransparency = 1
+            t.WaterWaveSize = 0
+        elseif action == "restore" then
+            t.WaterTransparency = 0.3
+            t.WaterWaveSize = 0.15
+        elseif action == "color" then
+            t.WaterColor = color
+            t.WaterTransparency = 0.3
+        end
+    end
+    task.spawn(function()
+        for _, o in ipairs(Workspace:GetDescendants()) do
+            if o:IsA("BasePart") and o ~= t then
+                local n = string.lower(o.Name)
+                if o.Material == Enum.Material.Water or string.find(n, "water") or string.find(n, "ocean") then
+                    if action == "remove" then
+                        o.Transparency = 1
+                    elseif action == "restore" then
+                        o.Transparency = 0.5
+                    elseif action == "color" then
+                        o.Color = color
+                        o.Transparency = 0.5
+                    end
+                end
+            end
+        end
+    end)
+end
+
+local BlackPalletsEnabled = false
+local SavedPallets = {}
+
+local function ToggleBlackPallets(state)
+    BlackPalletsEnabled = state
+    if not state then
+        for part, data in pairs(SavedPallets) do
+            if part and part.Parent then
+                part.Color = data.Color
+                part.Material = data.Material
+            end
+        end
+        SavedPallets = {}
+    end
+end
+
+Workspace.DescendantAdded:Connect(function(obj)
+    if BlackPalletsEnabled and obj:IsA("BasePart") then
+        if obj.Anchored then return end
+        local parent = obj.Parent
+        if parent and (parent:FindFirstChildOfClass("Humanoid") or parent:IsA("Accessory")) then return end
+        if obj.Size.Magnitude > 100 then return end
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp and (obj.Position - hrp.Position).Magnitude < 50 then
+            task.spawn(function()
+                task.wait(0.1)
+                if obj and obj.Parent and BlackPalletsEnabled then
+                    if not SavedPallets[obj] then
+                        SavedPallets[obj] = {Color = obj.Color, Material = obj.Material}
+                    end
+                    obj.Color = Color3.fromRGB(0, 0, 0)
+                    obj.Material = Enum.Material.SmoothPlastic
+                end
+            end)
+        end
+    end
+end)
+
+local VisualTab = CreateTab("Visual", "👁️")
+AddSection(VisualTab, "Camera")
+AddSlider(VisualTab, "Field of view", 50, 120, 70, function(v) if Workspace.CurrentCamera then Workspace.CurrentCamera.FieldOfView = v end end)
+AddToggle(VisualTab, "Third person", false, function(s)
+    LocalPlayer.CameraMaxZoomDistance = s and 128 or 12.5
+    LocalPlayer.CameraMinZoomDistance = s and 0.5 or 0.5
+end)
+AddSection(VisualTab, "Time")
+AddSlider(VisualTab, "Time of day", 0, 24, 14, function(v) Lighting.ClockTime = v end)
+AddSection(VisualTab, "Skybox")
+AddButton(VisualTab, "Reset Skybox", RestoreSkybox)
+AddDropdown(VisualTab, "Select skybox", {
+    "HD", "Black Storm", "Snow", "Blue Space", "Realistic", "Sunset", "Space", "Pink", "Galaxy", "Roblox Default"
+}, function(selected) ApplySkybox(selected) end)
+AddSection(VisualTab, "Shaders")
+AddButton(VisualTab, "Reset Shaders", RestoreShader)
+AddDropdown(VisualTab, "Shader Preset", {
+    "Ночь", "Вечер", "Неон", "Холодный", "Тёплый"
+}, function(selected) ApplyShader(selected) end)
+AddSection(VisualTab, "Effects")
+AddToggle(VisualTab, "Jump Circle", false, ToggleJumpCircle)
+AddToggle(VisualTab, "Trace to Target", false, ToggleTrace)
+AddToggle(VisualTab, "Blackhole", false, ToggleBlackhole)
+
+local WaterTab = CreateTab("Water", "🌊")
+AddSection(WaterTab, "Water Color")
+AddButton(WaterTab, "Blue", function() WaterAction("color", Color3.fromRGB(12, 84, 92)) end)
+AddButton(WaterTab, "Red", function() WaterAction("color", Color3.fromRGB(150, 30, 30)) end)
+AddButton(WaterTab, "Green", function() WaterAction("color", Color3.fromRGB(30, 150, 30)) end)
+AddSection(WaterTab, "Visibility")
+AddButton(WaterTab, "Remove Water", function() WaterAction("remove") end)
+AddButton(WaterTab, "Restore Water", function() WaterAction("restore") end)
+
+local OptTab = CreateTab("Optimize", "🚀")
+AddSection(OptTab, "Graphics")
+AddToggle(OptTab, "Bright / No Shadows", false, function(s)
+    if s then
+        Lighting.Brightness = 3
+        Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+        Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
+        Lighting.FogEnd = 1e9
+        Lighting.GlobalShadows = false
+        for _, v in ipairs(Lighting:GetChildren()) do
+            if v:IsA("PostEffect") then v.Enabled = false end
+        end
+    else
+        Lighting.Brightness = 2
+        Lighting.Ambient = Color3.fromRGB(70, 70, 70)
+        Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+        Lighting.FogEnd = 100000
+        Lighting.GlobalShadows = true
+    end
+end)
+AddToggle(OptTab, "FPS Unlock", false, function(s)
+    pcall(function() if setfpscap then setfpscap(s and 0 or 60) end end)
+end)
+AddSection(OptTab, "World")
+AddToggle(OptTab, "Black Pallets", false, ToggleBlackPallets)
+
+local StatsTab = CreateTab("Stats", "📊")
+AddSection(StatsTab, "Information")
+AddToggle(StatsTab, "Show FPS / Ping", false, function(s)
+    if StatsGui then StatsGui.Enabled = s end
+end)
+
+Tabs["Visual"].Btn.BackgroundColor3 = Theme.Element
+Tabs["Visual"].Btn.TextColor3 = Theme.Text
+Tabs["Visual"].Frame.Visible = true
+ToggleBtn.MouseButton1Click:Connect(function() Window.Visible = not Window.Visible end)
+CloseBtn.MouseButton1Click:Connect(function() Window.Visible = false end)
+
+local StatsGui = Instance.new("ScreenGui")
+StatsGui.Name = "NebesnyStatsGui"
+StatsGui.ResetOnSpawn = false
+StatsGui.Enabled = false
+StatsGui.Parent = PlayerGui
+
+local StatsFrame = Instance.new("Frame")
+StatsFrame.Size = UDim2.new(0, 140, 0, 50)
+StatsFrame.Position = UDim2.new(0, 20, 0, 20)
+StatsFrame.BackgroundColor3 = Theme.Background
+StatsFrame.BackgroundTransparency = 0.2
+StatsFrame.Parent = StatsGui
+Instance.new("UICorner", StatsFrame).CornerRadius = UDim.new(0, 8)
+
+local FPSLbl = Instance.new("TextLabel")
+FPSLbl.Size = UDim2.new(1, 0, 0.5, 0); FPSLbl.BackgroundTransparency = 1; FPSLbl.Text = "FPS: 60"; FPSLbl.TextColor3 = Theme.Accent; FPSLbl.Font = Enum.Font.GothamBold; FPSLbl.TextSize = 13; FPSLbl.Parent = StatsFrame
+
+local PingLbl = Instance.new("TextLabel")
+PingLbl.Size = UDim2.new(1, 0, 0.5, 0); PingLbl.Position = UDim2.new(0, 0, 0.5, 0); PingLbl.BackgroundTransparency = 1; PingLbl.Text = "Ping: 0 ms"; PingLbl.TextColor3 = Theme.Text; PingLbl.Font = Enum.Font.GothamBold; PingLbl.TextSize = 13; PingLbl.Parent = StatsFrame
+
+MakeDraggable(StatsFrame, StatsFrame)
+local Frames = 0
+RunService.RenderStepped:Connect(function() Frames = Frames + 1 end)
+
+task.spawn(function()
+    while task.wait(1) do
+        FPSLbl.Text = "FPS: " .. Frames
+        FPSLbl.TextColor3 = Frames >= 50 and Theme.Accent or (Frames >= 30 and Color3.fromRGB(230, 200, 80) or Color3.fromRGB(230, 80, 80))
+        Frames = 0
+    end
+end)
+
+task.spawn(function()
+    while task.wait(1) do
+        pcall(function()
+            local ping = 0
+            local stat = game:GetService("Stats").Network.ServerStatsItem["Data Ping"]
+            if stat then ping = stat:GetValue() end
+            PingLbl.Text = "Ping: " .. math.floor(ping) .. " ms"
+            PingLbl.TextColor3 = ping <= 80 and Theme.Accent or (ping <= 150 and Color3.fromRGB(230, 200, 80) or Color3.fromRGB(230, 80, 80))
+        end)
+    end
+end)
+
+print("[Nebesny Visual] Успешно загружено! Все функции Eris интегрированы.")
